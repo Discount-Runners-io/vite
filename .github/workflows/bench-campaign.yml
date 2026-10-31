@@ -38,19 +38,19 @@ jobs:
       ROUNDS: ${{ inputs.rounds }}
       GAP: ${{ inputs.gap_minutes }}
     steps:
-    - name: Dispatch bench runs
-      run: |
-        set -euo pipefail
-        for round in $(seq 1 "$ROUNDS"); do
-          for set in $(printf '%s\n' $SETS | shuf); do
-            IFS=, read -r runner slim arm <<<"$set"
-            for wf in $WORKFLOWS; do
-              gh workflow run "$wf" --ref "${{ github.event.repository.default_branch }}" \
-                -f runner="$runner" -f slim_runner="${slim:-$runner}" -f arm_runner="${arm:-$runner}" \
-                -f tag="$CAMPAIGN-r$round"
-              echo "dispatched $wf round=$round runner=$runner slim=${slim:-$runner} arm=${arm:-$runner}"
-              sleep 2
+      - name: Dispatch bench runs
+        run: |
+          set -euo pipefail
+          for round in $(seq 1 "$ROUNDS"); do
+            for set in $(printf '%s\n' $SETS | shuf); do
+              IFS=, read -r runner slim arm <<<"$set"
+              for wf in $WORKFLOWS; do
+                gh workflow run "$wf" --ref "${{ github.event.repository.default_branch }}" \
+                  -f runner="$runner" -f slim_runner="${slim:-$runner}" -f arm_runner="${arm:-$runner}" \
+                  -f tag="$CAMPAIGN-r$round"
+                echo "dispatched $wf round=$round runner=$runner slim=${slim:-$runner} arm=${arm:-$runner}"
+                sleep 2
+              done
             done
+            if [ "$round" -lt "$ROUNDS" ] && [ "$GAP" -gt 0 ]; then sleep $((GAP * 60)); fi
           done
-          if [ "$round" -lt "$ROUNDS" ] && [ "$GAP" -gt 0 ]; then sleep $((GAP * 60)); fi
-        done
