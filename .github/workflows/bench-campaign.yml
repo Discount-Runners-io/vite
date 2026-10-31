@@ -1,0 +1,56 @@
+name: Bench campaign
+run-name: Bench campaign ${{ inputs.campaign }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      campaign:
+        description: Campaign id, e.g. gh-2026-10-31; each run is tagged <campaign>-r<round>
+        type: string
+        required: true
+      runner_sets:
+        description: Space-separated runner sets, each runner,slim_runner,arm_runner
+        type: string
+        default: ubuntu-latest,ubuntu-slim,ubuntu-24.04-arm
+      rounds:
+        description: Runs per runner set
+        type: number
+        default: 5
+      gap_minutes:
+        description: Minutes between rounds
+        type: number
+        default: 0
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      WORKFLOWS: ci.yml
+      CAMPAIGN: ${{ inputs.campaign }}
+      SETS: ${{ inputs.runner_sets }}
+      ROUNDS: ${{ inputs.rounds }}
+      GAP: ${{ inputs.gap_minutes }}
+    steps:
+    - name: Dispatch bench runs
+      run: |
+        set -euo pipefail
+        for round in $(seq 1 "$ROUNDS"); do
+          for set in $(printf '%s\n' $SETS | shuf); do
+            IFS=, read -r runner slim arm <<<"$set"
+            for wf in $WORKFLOWS; do
+              gh workflow run "$wf" --ref "${{ github.event.repository.default_branch }}" \
+                -f runner="$runner" -f slim_runner="${slim:-$runner}" -f arm_runner="${arm:-$runner}" \
+                -f tag="$CAMPAIGN-r$round"
+              echo "dispatched $wf round=$round runner=$runner slim=${slim:-$runner} arm=${arm:-$runner}"
+              sleep 2
+            done
+          done
+          if [ "$round" -lt "$ROUNDS" ] && [ "$GAP" -gt 0 ]; then sleep $((GAP * 60)); fi
+        done
