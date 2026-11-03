@@ -107,10 +107,10 @@ jobs:
       - name: Cache Playwright's binary
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          key: ${{ runner.os }}-playwright-bin-v1-${{ env.PLAYWRIGHT_VERSION }}
+          key: ${{ runner.os }}-${{ runner.arch }}-playwright-bin-v1-${{ env.PLAYWRIGHT_VERSION }}
           path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
           restore-keys: |
-            ${{ runner.os }}-playwright-bin-v1-
+            ${{ runner.os }}-${{ runner.arch }}-playwright-bin-v1-
 
       - name: Install Playwright
         # does not need to explicitly set chromium after https://github.com/microsoft/playwright/issues/14862 is solved
